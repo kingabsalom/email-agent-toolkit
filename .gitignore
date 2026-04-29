@@ -19,3 +19,7 @@ env/
 # IDE
 .vscode/
 .idea/
+
+# Gmail OAuth — never commit these
+credentials.json
+token.pickle

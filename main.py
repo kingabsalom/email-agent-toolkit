@@ -2,6 +2,9 @@
 Email Pipeline
 Classifies, scores, and suggests responses — sorted by priority.
 
+Uses real Gmail emails if credentials.json is present, otherwise falls back
+to sample_emails.json for testing.
+
 Usage:
     python3 main.py
 """
@@ -53,12 +56,30 @@ def print_summary_table(rows: list) -> None:
     print("─" * rule_width)
 
 
-def main():
+def load_emails() -> tuple:
+    """
+    Load emails from Gmail if credentials.json exists, otherwise use sample data.
+    Returns (emails, source_label).
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(script_dir, "sample_emails.json")) as f:
-        emails = json.load(f)
+    credentials_path = os.path.join(script_dir, "credentials.json")
 
-    print(f"Processing {len(emails)} emails...")
+    if os.path.exists(credentials_path):
+        print("credentials.json found — connecting to Gmail...")
+        from gmail_reader import read_inbox
+        emails = read_inbox(count=10)
+        return emails, "Gmail inbox (last 10)"
+
+    print("No credentials.json found — using sample emails.")
+    print("See README for Gmail setup instructions.\n")
+    with open(os.path.join(script_dir, "sample_emails.json")) as f:
+        return json.load(f), "sample_emails.json"
+
+
+def main():
+    emails, source = load_emails()
+
+    print(f"Processing {len(emails)} emails from {source}...")
 
     # Phase 1: classify and score every email (dots show progress)
     print("Classifying and scoring ", end="", flush=True)
