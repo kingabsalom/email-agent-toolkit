@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "sender": "it-alerts@company.com",
+    "subject": "CRITICAL: Production database down — immediate action needed",
+    "body": "The production database has been unavailable for 15 minutes. Multiple services are impacted and roughly 5,000 users cannot log in. We need all senior engineers on the incident call immediately. Join now at https://meet.company.com/incident-001. Assign someone to update the status page every 10 minutes."
+  },
+  {
+    "id": 2,
+    "sender": "manager@company.com",
+    "subject": "Q3 report due this Friday",
+    "body": "Hi team, just a reminder that the Q3 financial report is due Friday at 5pm. Please send your department summaries to Sarah by Thursday noon. Also, someone needs to review the budget projections before they go to leadership — can you confirm you'll handle that? Let me know by tomorrow EOD."
+  },
+  {
+    "id": 3,
+    "sender": "noreply@deals-unlimited.net",
+    "subject": "You have been SELECTED for a FREE iPhone 16!!!",
+    "body": "Congratulations!! You have been randomly selected to receive a FREE iPhone 16 Pro! This exclusive offer is available for the next 24 hours only. Click the link below to claim your prize and enter your shipping details: http://totally-legit-prize.deals-unlimited.net/claim. Don't miss out — act now!"
+  },
+  {
+    "id": 4,
+    "sender": "newsletter@devweekly.io",
+    "subject": "Dev Weekly #142: Rust, AI tooling, and open source news",
+    "body": "Welcome to this week's issue of Dev Weekly. In this edition: Rust 2.0 release candidate is out, a roundup of new AI coding assistants, GitHub introduces new code review features, and the top 5 open source projects of the month. As always, reply with topics you'd like us to cover next time."
+  },
+  {
+    "id": 5,
+    "sender": "alex@bigclient.com",
+    "subject": "Project proposal — feedback needed",
+    "body": "Hi, I've sent over the updated project proposal we discussed last week. Please review sections 3 and 4 in detail and send your feedback by next Wednesday. We also need to align on the revised budget — can you schedule a 30-minute call for Thursday afternoon? Looking forward to moving this forward."
+  }
+]
