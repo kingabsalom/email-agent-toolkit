@@ -14,6 +14,7 @@ import os
 from classify_emails import classify_email, print_summary
 from suggest_responses import suggest_responses, print_suggestions
 from score_priority import score_priority
+from create_draft import create_draft
 
 
 def truncate(text: str, max_len: int) -> str:
@@ -56,10 +57,26 @@ def print_summary_table(rows: list) -> None:
     print("─" * rule_width)
 
 
+def _prompt_save_draft(email: dict, suggestions: dict) -> None:
+    """Ask the user to pick a suggested reply to save as a Gmail draft."""
+    opts = suggestions["suggestions"]
+    count = len(opts)
+    while True:
+        choice = input(f"\n  Save a draft? Enter 1-{count} or s to skip: ").strip().lower()
+        if choice == "s":
+            return
+        if choice.isdigit() and 1 <= int(choice) <= count:
+            selected = opts[int(choice) - 1]
+            result = create_draft(email["sender"], selected["subject"], selected["body"])
+            print(f"  Draft saved to Gmail (id: {result['id']})")
+            return
+        print(f"  Enter a number 1-{count} or 's' to skip.")
+
+
 def load_emails() -> tuple:
     """
     Load emails from Gmail if credentials.json exists, otherwise use sample data.
-    Returns (emails, source_label).
+    Returns (emails, source_label, using_gmail).
     """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     credentials_path = os.path.join(script_dir, "credentials.json")
@@ -68,16 +85,16 @@ def load_emails() -> tuple:
         print("credentials.json found — connecting to Gmail...")
         from gmail_reader import read_inbox
         emails = read_inbox(count=10)
-        return emails, "Gmail inbox (last 10)"
+        return emails, "Gmail inbox (last 10)", True
 
     print("No credentials.json found — using sample emails.")
     print("See README for Gmail setup instructions.\n")
     with open(os.path.join(script_dir, "sample_emails.json")) as f:
-        return json.load(f), "sample_emails.json"
+        return json.load(f), "sample_emails.json", False
 
 
 def main():
-    emails, source = load_emails()
+    emails, source, using_gmail = load_emails()
 
     print(f"Processing {len(emails)} emails from {source}...")
 
@@ -104,6 +121,8 @@ def main():
         print(f"\nPriority: {priority['score']}/10 — {priority['explanation']}")
         suggestions = suggest_responses(email, classification)
         print_suggestions(suggestions)
+        if using_gmail:
+            _prompt_save_draft(email, suggestions)
 
     print(f"\n{'─' * 60}")
     print("Done.")

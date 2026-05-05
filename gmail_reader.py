@@ -19,8 +19,10 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
-# Read-only access is all we need
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.compose",
+]
 
 CREDENTIALS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "credentials.json")
 TOKEN_FILE       = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token.pickle")
@@ -29,27 +31,25 @@ TOKEN_FILE       = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tok
 MAX_BODY_CHARS = 2000
 
 
-def _get_service():
+def get_service():
     """Authenticate and return a Gmail API service instance."""
     creds = None
 
-    # Reuse a saved token if we have one
     if os.path.exists(TOKEN_FILE):
         with open(TOKEN_FILE, "rb") as f:
             creds = pickle.load(f)
 
-    # Refresh an expired token, or run the full OAuth flow for a new one
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            # Opens a browser window for the user to approve access
-            creds = flow.run_local_server(port=0)
+    # Re-run OAuth if creds are missing or don't cover all required scopes
+    scope_ok = creds and set(SCOPES).issubset(creds.scopes or set())
 
-        # Save the token so we don't need to authorize again next time
-        with open(TOKEN_FILE, "wb") as f:
-            pickle.dump(creds, f)
+    if not creds or not scope_ok:
+        flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+        creds = flow.run_local_server(port=0)
+    elif creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+
+    with open(TOKEN_FILE, "wb") as f:
+        pickle.dump(creds, f)
 
     return build("gmail", "v1", credentials=creds)
 
@@ -114,7 +114,7 @@ def read_inbox(count: int = 10) -> list:
         list of dicts with keys: sender, subject, body, date
         (same structure as sample_emails.json so the agents work unchanged)
     """
-    service = _get_service()
+    service = get_service()
 
     result = service.users().messages().list(
         userId="me",
