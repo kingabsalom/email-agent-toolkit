@@ -114,20 +114,24 @@ def _extract_body(payload: dict) -> str:
     return "(no readable body)"
 
 
-def read_inbox(count: int = 10) -> list:
+def read_inbox(count: int = 10, query: str = "") -> list:
     """
-    Fetch the most recent emails from the Gmail inbox.
+    Fetch emails from the Gmail inbox.
+
+    Args:
+        count: max number of emails to retrieve
+        query: optional Gmail search query (e.g. "newer_than:48h")
 
     Returns list of dicts with keys: sender, subject, body, date
     (same structure as sample_emails.json so agents work unchanged)
     """
     service = get_service()
 
-    result = service.users().messages().list(
-        userId="me",
-        labelIds=["INBOX"],
-        maxResults=count
-    ).execute()
+    kwargs = {"userId": "me", "labelIds": ["INBOX"], "maxResults": count}
+    if query:
+        kwargs["q"] = query
+
+    result = service.users().messages().list(**kwargs).execute()
 
     messages = result.get("messages", [])
     emails = []

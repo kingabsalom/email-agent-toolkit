@@ -28,19 +28,19 @@ from export_csv import export_csv
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard_data.json")
 
 
-def build_dashboard_data(count: int = 10) -> dict:
+def build_dashboard_data(hours: int = 48) -> dict:
     """
     Run the full pipeline and return a JSON-serializable dict ready for the dashboard.
 
     Args:
-        count: number of inbox emails to process
+        hours: fetch emails from the last N hours (default: 48)
 
     Returns:
         dict with 'processed_at', 'emails', and 'followup_reminders'
     """
-    emails = read_inbox(count=count)
+    emails = read_inbox(count=500, query=f"newer_than:{hours}h")
 
-    print(f"Processing {len(emails)} emails ", end="", flush=True)
+    print(f"Processing {len(emails)} emails from the last {hours}h ", end="", flush=True)
     rows               = []
     suggested_subjects = []
     email_records      = []
@@ -94,12 +94,12 @@ def build_dashboard_data(count: int = 10) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Process inbox and launch the web dashboard.")
-    parser.add_argument("--count",      type=int,  default=10,    help="Emails to process (default: 10)")
+    parser.add_argument("--hours",      type=int,  default=48,    help="Hours of email history to process (default: 48)")
     parser.add_argument("--port",       type=int,  default=5000,  help="Flask port (default: 5000)")
     parser.add_argument("--no-browser", action="store_true",      help="Don't open browser automatically")
     args = parser.parse_args()
 
-    data = build_dashboard_data(count=args.count)
+    data = build_dashboard_data(hours=args.hours)
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
