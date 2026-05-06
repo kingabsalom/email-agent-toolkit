@@ -8,18 +8,21 @@ import datetime
 import os
 
 
-def export_csv(rows: list, draft_choices: list, output_dir: str = None) -> str:
+def export_csv(rows: list, draft_choices: list, suggested_subjects: list = None, output_dir: str = None) -> str:
     """
     Write pipeline results to a CSV file.
 
     Args:
-        rows:          list of (email, classification, priority) tuples, priority-sorted
-        draft_choices: list of draft labels saved per email (str or None), same order as rows
-        output_dir:    directory to write the file (defaults to the script directory)
+        rows:               list of (email, classification, priority) tuples, priority-sorted
+        draft_choices:      list of draft labels saved per email (str or None), same order as rows
+        suggested_subjects: list of improved subject lines per email (str or None), same order as rows
+        output_dir:         directory to write the file (defaults to the script directory)
 
     Returns:
         absolute path of the written CSV file
     """
+    if suggested_subjects is None:
+        suggested_subjects = [None] * len(rows)
     if output_dir is None:
         output_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -32,6 +35,7 @@ def export_csv(rows: list, draft_choices: list, output_dir: str = None) -> str:
         "date",
         "sender",
         "subject",
+        "suggested_subject",
         "classification",
         "confidence",
         "priority_score",
@@ -47,14 +51,15 @@ def export_csv(rows: list, draft_choices: list, output_dir: str = None) -> str:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
 
-        for rank, ((email, classification, priority), draft_label) in enumerate(
-            zip(rows, draft_choices), 1
+        for rank, ((email, classification, priority), draft_label, suggested_subject) in enumerate(
+            zip(rows, draft_choices, suggested_subjects), 1
         ):
             writer.writerow({
                 "rank":                 rank,
                 "date":                 email.get("date", ""),
                 "sender":               email["sender"],
                 "subject":              email["subject"],
+                "suggested_subject":    suggested_subject or "",
                 "classification":       classification["classification"].upper(),
                 "confidence":           classification["confidence"],
                 "priority_score":       priority["score"],

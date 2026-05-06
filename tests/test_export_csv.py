@@ -31,9 +31,9 @@ def test_correct_headers():
         with open(path, newline="") as f:
             reader = csv.DictReader(f)
             assert set(reader.fieldnames) == {
-                "rank", "date", "sender", "subject", "classification",
-                "confidence", "priority_score", "priority_explanation",
-                "action_items", "draft_saved", "exported_at",
+                "rank", "date", "sender", "subject", "suggested_subject",
+                "classification", "confidence", "priority_score",
+                "priority_explanation", "action_items", "draft_saved", "exported_at",
             }
 
 
@@ -74,3 +74,21 @@ def test_action_items_joined_by_semicolon():
         with open(path, newline="") as f:
             row = list(csv.DictReader(f))[0]
         assert row["action_items"] == "Task A; Task B"
+
+
+def test_suggested_subject_written_to_csv():
+    from export_csv import export_csv
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = export_csv(_make_rows(1), [None], ["Improved Subject Line"], output_dir=tmpdir)
+        with open(path, newline="") as f:
+            row = list(csv.DictReader(f))[0]
+        assert row["suggested_subject"] == "Improved Subject Line"
+
+
+def test_suggested_subject_empty_when_not_provided():
+    from export_csv import export_csv
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = export_csv(_make_rows(1), [None], output_dir=tmpdir)
+        with open(path, newline="") as f:
+            row = list(csv.DictReader(f))[0]
+        assert row["suggested_subject"] == ""

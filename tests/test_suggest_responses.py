@@ -52,3 +52,21 @@ def test_bodies_are_nonempty():
     result = _call()
     for s in result["suggestions"]:
         assert len(s["body"].strip()) > 0
+
+
+def test_suggested_subject_returned():
+    result = _call()
+    assert "suggested_subject" in result
+    assert isinstance(result["suggested_subject"], str)
+
+
+def test_suggested_subject_nonempty_when_vague():
+    payload = {**SUGGEST_RESPONSE, "suggested_subject": "Q3 Budget Review: Approval Needed by Friday"}
+    result = _call(payload)
+    assert len(result["suggested_subject"]) > 0
+
+
+def test_suggested_subject_unchanged_when_clear():
+    payload = {**SUGGEST_RESPONSE, "suggested_subject": "CRITICAL: Production database down — immediate action needed"}
+    result = _call(payload)
+    assert result["suggested_subject"] == "CRITICAL: Production database down — immediate action needed"

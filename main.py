@@ -119,18 +119,20 @@ def main():
     # Phase 4: full details + response suggestions in priority order
     print("\n\nDETAILED VIEW  (sorted by priority)\n")
     draft_choices = []
+    suggested_subjects = []
     for rank, (email, classification, priority) in enumerate(rows, 1):
         print_summary(email, classification)
         print(f"\nPriority: {priority['score']}/10 — {priority['explanation']}")
         suggestions = suggest_responses(email, classification)
         print_suggestions(suggestions)
+        suggested_subjects.append(suggestions.get("suggested_subject") or "")
         if using_gmail:
             draft_choices.append(_prompt_save_draft(email, suggestions))
         else:
             draft_choices.append(None)
 
     # Phase 5: export results to CSV
-    csv_path = export_csv(rows, draft_choices)
+    csv_path = export_csv(rows, draft_choices, suggested_subjects)
     print(f"\n{'─' * 60}")
     print(f"Results exported to: {csv_path}")
     print("Done.")

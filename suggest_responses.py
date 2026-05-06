@@ -17,12 +17,17 @@ Approach by classification:
 - SPAM: Do not draft a reply. Provide one suggestion on how to handle it (mark as spam, delete, report)
 
 For URGENT, ACTION-REQUIRED, and ROUTINE: generate 2-3 options with different tones (e.g. Formal, Casual, Brief).
-Each option needs a label, a subject line using "Re: <original subject>", and a complete ready-to-send body."""
+Each option needs a label, a subject line using "Re: <original subject>", and a complete ready-to-send body.
+
+Also suggest an improved subject line for the original email if the current one is vague, missing context,
+or not searchable (e.g. "follow up" → "Q3 Budget Review: Feedback Needed by Friday"). If the original
+subject is already clear and specific, return it unchanged."""
 
 # Same pattern as the classifier — enforce a consistent JSON structure
 RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
+        "suggested_subject": {"type": "string"},
         "suggestions": {
             "type": "array",
             "items": {
@@ -37,7 +42,7 @@ RESPONSE_SCHEMA = {
             }
         }
     },
-    "required": ["suggestions"],
+    "required": ["suggested_subject", "suggestions"],
     "additionalProperties": False
 }
 
@@ -90,11 +95,14 @@ def suggest_responses(email: dict, classification: dict) -> dict:
 
 def print_suggestions(result: dict) -> None:
     """Print the response suggestions below a classified email."""
+    suggested = result.get("suggested_subject", "")
+    if suggested:
+        print(f"\n  Suggested subject: {suggested}")
+
     print("\nSuggested Responses:")
     for i, s in enumerate(result["suggestions"], 1):
         print(f"\n  Option {i} [{s['label']}]")
         print(f"  Subject: {s['subject']}")
         print(f"  {'·' * 54}")
-        # Indent every line of the body so it reads as a block
         for line in s["body"].strip().split("\n"):
             print(f"  {line}")

@@ -31,6 +31,7 @@ SCORE_RESPONSE = {
 }
 
 SUGGEST_RESPONSE = {
+    "suggested_subject": "Production DB Outage: 5k Users Affected — Active Incident",
     "suggestions": [
         {
             "label": "Formal",
