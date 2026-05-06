@@ -103,8 +103,8 @@ def main():
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
-    url = f"http://localhost:{args.port}"
-    print(f"\nDashboard ready at {url}")
+    url = f"http://127.0.0.1:{args.port}"
+    print(f"\nDashboard ready at {url} (opening browser...)")
 
     if not args.no_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
