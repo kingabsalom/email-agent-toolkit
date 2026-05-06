@@ -73,6 +73,21 @@ def test_format_digest_shows_priority_score():
     assert f"{SCORE_RESPONSE['score']}/10" in result
 
 
+def test_format_digest_includes_followup_reminders():
+    from digest_email import format_digest
+    reminders = [{"subject": "Project update", "to": "boss@co.com", "sent_date": "2026-05-01", "days_waiting": 5}]
+    result = format_digest(_make_rows(1), reminders=reminders)
+    assert "FOLLOW-UP REMINDERS" in result
+    assert "Project update" in result
+    assert "5d waiting" in result
+
+
+def test_format_digest_no_reminders_section_when_empty():
+    from digest_email import format_digest
+    result = format_digest(_make_rows(1), reminders=[])
+    assert "FOLLOW-UP REMINDERS" not in result
+
+
 # --- send_digest tests (mock Gmail API) ---
 
 def _mock_service(user_email="me@example.com"):
@@ -116,3 +131,22 @@ def test_send_digest_subject_contains_date_and_count():
     )
     assert "2 emails" in subject
     assert str(datetime.date.today().year) in subject
+
+
+def test_send_digest_subject_includes_followup_count():
+    import base64, email as email_lib
+    from email.header import decode_header
+    from digest_email import send_digest
+    mock_service = _mock_service()
+    reminders = [{"subject": "Hi", "to": "x@y.com", "sent_date": "2026-05-01", "days_waiting": 4}]
+    with patch("digest_email.get_service", return_value=mock_service):
+        send_digest(_make_rows(1), reminders=reminders)
+    call_kwargs = mock_service.users.return_value.messages.return_value.send.call_args.kwargs
+    raw = base64.urlsafe_b64decode(call_kwargs["body"]["raw"]).decode()
+    msg = email_lib.message_from_string(raw)
+    decoded_parts = decode_header(msg["Subject"])
+    subject = "".join(
+        part.decode(enc or "utf-8") if isinstance(part, bytes) else part
+        for part, enc in decoded_parts
+    )
+    assert "follow-up" in subject.lower()

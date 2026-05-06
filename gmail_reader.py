@@ -1,10 +1,11 @@
 """
-Gmail Reader
-Authenticates with Google OAuth2 and reads emails from the inbox.
+Gmail Reader + Google Auth
+Authenticates with Google OAuth2 and provides service builders for Gmail,
+Calendar, and Tasks APIs.
 
 Setup (one-time):
   1. Go to console.cloud.google.com
-  2. Create a project → Enable the Gmail API
+  2. Create a project → Enable the Gmail, Calendar, and Tasks APIs
   3. Create OAuth2 credentials (Desktop app) → Download as credentials.json
   4. Place credentials.json in this directory
   5. Run main.py — a browser window will open to authorize access
@@ -22,24 +23,24 @@ from googleapiclient.discovery import build
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/calendar",
+    "https://www.googleapis.com/auth/tasks",
 ]
 
 CREDENTIALS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "credentials.json")
 TOKEN_FILE       = os.path.join(os.path.dirname(os.path.abspath(__file__)), "token.pickle")
 
-# Truncate bodies to keep token usage reasonable for the AI agents
 MAX_BODY_CHARS = 2000
 
 
-def get_service():
-    """Authenticate and return a Gmail API service instance."""
+def _get_credentials():
+    """Authenticate and return credentials covering all required scopes."""
     creds = None
 
     if os.path.exists(TOKEN_FILE):
         with open(TOKEN_FILE, "rb") as f:
             creds = pickle.load(f)
 
-    # Re-run OAuth if creds are missing or don't cover all required scopes
     scope_ok = creds and set(SCOPES).issubset(creds.scopes or set())
 
     if not creds or not scope_ok:
@@ -51,11 +52,25 @@ def get_service():
     with open(TOKEN_FILE, "wb") as f:
         pickle.dump(creds, f)
 
-    return build("gmail", "v1", credentials=creds)
+    return creds
+
+
+def get_service():
+    """Return an authenticated Gmail API service."""
+    return build("gmail", "v1", credentials=_get_credentials())
+
+
+def get_calendar_service():
+    """Return an authenticated Google Calendar API service."""
+    return build("calendar", "v3", credentials=_get_credentials())
+
+
+def get_tasks_service():
+    """Return an authenticated Google Tasks API service."""
+    return build("tasks", "v1", credentials=_get_credentials())
 
 
 def _get_header(headers: list, name: str) -> str:
-    """Find a header value by name (case-insensitive)."""
     for h in headers:
         if h["name"].lower() == name.lower():
             return h["value"]
@@ -69,7 +84,6 @@ def _extract_body(payload: dict) -> str:
     """
     mime = payload.get("mimeType", "")
 
-    # Plain text — decode and return directly
     if mime == "text/plain":
         data = payload.get("body", {}).get("data", "")
         if data:
@@ -78,21 +92,18 @@ def _extract_body(payload: dict) -> str:
     if mime.startswith("multipart/"):
         parts = payload.get("parts", [])
 
-        # Prefer text/plain over everything else
         for part in parts:
             if part.get("mimeType") == "text/plain":
                 result = _extract_body(part)
                 if result:
                     return result
 
-        # Recurse into nested multipart blocks (e.g. multipart/alternative inside multipart/mixed)
         for part in parts:
             if part.get("mimeType", "").startswith("multipart/"):
                 result = _extract_body(part)
                 if result:
                     return result
 
-        # Fall back to HTML, stripping tags
         for part in parts:
             if part.get("mimeType") == "text/html":
                 data = part.get("body", {}).get("data", "")
@@ -105,14 +116,10 @@ def _extract_body(payload: dict) -> str:
 
 def read_inbox(count: int = 10) -> list:
     """
-    Fetch the most recent emails from Gmail inbox.
+    Fetch the most recent emails from the Gmail inbox.
 
-    Args:
-        count: how many emails to retrieve (default 10)
-
-    Returns:
-        list of dicts with keys: sender, subject, body, date
-        (same structure as sample_emails.json so the agents work unchanged)
+    Returns list of dicts with keys: sender, subject, body, date
+    (same structure as sample_emails.json so agents work unchanged)
     """
     service = get_service()
 

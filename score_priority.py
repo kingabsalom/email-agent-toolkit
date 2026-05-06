@@ -40,13 +40,14 @@ SCORE_SCHEMA = {
 }
 
 
-def score_priority(email: dict, classification: dict) -> dict:
+def score_priority(email: dict, classification: dict, contact: dict = None) -> dict:
     """
     Score the priority of a classified email.
 
     Args:
         email:          dict with 'sender', 'subject', 'body'
         classification: dict with 'classification', 'confidence', 'action_items'
+        contact:        optional enrichment dict with 'company', 'domain_type', 'title'
 
     Returns:
         dict with 'score' (int 1-10) and 'explanation' (str)
@@ -56,12 +57,25 @@ def score_priority(email: dict, classification: dict) -> dict:
         lines = "\n".join(f"  - {item}" for item in classification["action_items"])
         action_text = f"\n\nAction items:\n{lines}"
 
+    contact_text = ""
+    if contact:
+        parts = []
+        if contact.get("company"):
+            parts.append(f"Company: {contact['company']}")
+        if contact.get("title"):
+            parts.append(f"Role: {contact['title']}")
+        if contact.get("domain_type"):
+            parts.append(f"Domain type: {contact['domain_type']}")
+        if parts:
+            contact_text = "\n\nContact info:\n" + "\n".join(f"  {p}" for p in parts)
+
     prompt = (
         f"From: {email['sender']}\n"
         f"Subject: {email['subject']}\n\n"
         f"{email['body']}\n\n"
         f"Classification: {classification['classification'].upper()}"
         f"{action_text}"
+        f"{contact_text}"
     )
 
     response = client.messages.create(

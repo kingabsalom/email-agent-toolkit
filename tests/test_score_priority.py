@@ -39,3 +39,19 @@ def test_works_with_no_action_items():
     with patch("score_priority.client.messages.create", return_value=mock_api_response(payload)):
         result = score_priority(SAMPLE_EMAIL, classification)
     assert result["score"] == 3
+
+
+def test_accepts_contact_enrichment():
+    from score_priority import score_priority
+    contact = {"name": "Alex Smith", "company": "BigClient", "domain_type": "corporate", "title": "VP Sales"}
+    payload = {"score": 8, "explanation": "Senior contact at a corporate client."}
+    with patch("score_priority.client.messages.create", return_value=mock_api_response(payload)) as mock_api:
+        result = score_priority(SAMPLE_EMAIL, CLASSIFY_RESPONSE, contact=contact)
+    assert result["score"] == 8
+    call_prompt = mock_api.call_args.kwargs["messages"][0]["content"]
+    assert "BigClient" in call_prompt
+
+
+def test_contact_none_does_not_break():
+    result = _call(7)
+    assert result["score"] == 7
