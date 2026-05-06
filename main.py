@@ -15,6 +15,7 @@ from classify_emails import classify_email, print_summary
 from suggest_responses import suggest_responses, print_suggestions
 from score_priority import score_priority
 from create_draft import create_draft
+from export_csv import export_csv
 
 
 def truncate(text: str, max_len: int) -> str:
@@ -57,19 +58,20 @@ def print_summary_table(rows: list) -> None:
     print("─" * rule_width)
 
 
-def _prompt_save_draft(email: dict, suggestions: dict) -> None:
-    """Ask the user to pick a suggested reply to save as a Gmail draft."""
+def _prompt_save_draft(email: dict, suggestions: dict) -> str | None:
+    """Ask the user to pick a suggested reply to save as a Gmail draft.
+    Returns the chosen option label, or None if skipped."""
     opts = suggestions["suggestions"]
     count = len(opts)
     while True:
         choice = input(f"\n  Save a draft? Enter 1-{count} or s to skip: ").strip().lower()
         if choice == "s":
-            return
+            return None
         if choice.isdigit() and 1 <= int(choice) <= count:
             selected = opts[int(choice) - 1]
             result = create_draft(email["sender"], selected["subject"], selected["body"])
             print(f"  Draft saved to Gmail (id: {result['id']})")
-            return
+            return selected["label"]
         print(f"  Enter a number 1-{count} or 's' to skip.")
 
 
@@ -116,15 +118,21 @@ def main():
 
     # Phase 4: full details + response suggestions in priority order
     print("\n\nDETAILED VIEW  (sorted by priority)\n")
+    draft_choices = []
     for rank, (email, classification, priority) in enumerate(rows, 1):
         print_summary(email, classification)
         print(f"\nPriority: {priority['score']}/10 — {priority['explanation']}")
         suggestions = suggest_responses(email, classification)
         print_suggestions(suggestions)
         if using_gmail:
-            _prompt_save_draft(email, suggestions)
+            draft_choices.append(_prompt_save_draft(email, suggestions))
+        else:
+            draft_choices.append(None)
 
+    # Phase 5: export results to CSV
+    csv_path = export_csv(rows, draft_choices)
     print(f"\n{'─' * 60}")
+    print(f"Results exported to: {csv_path}")
     print("Done.")
 
 
