@@ -86,6 +86,8 @@ def format_digest(rows: list, suggested_subjects: list = None, reminders: list =
             lines.append("")
 
     lines.append("=" * 70)
+    lines.append("Open your dashboard: http://127.0.0.1:5000")
+    lines.append("To launch it: python3 run_dashboard.py")
     lines.append("Sent by email-agent-toolkit")
     return "\n".join(lines)
 
