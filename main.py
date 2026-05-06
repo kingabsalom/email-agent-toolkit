@@ -21,6 +21,7 @@ from create_calendar_event import create_calendar_event
 from create_tasks import create_tasks
 from followup_tracker import get_followup_reminders, print_followup_reminders
 from enrich_contact import enrich_contact
+from reputation import get_reputation, update_from_session
 
 
 def truncate(text: str, max_len: int) -> str:
@@ -60,7 +61,7 @@ def print_summary_table(rows: list) -> None:
     print("─" * rule_width)
 
 
-def _prompt_save_draft(email: dict, suggestions: dict) -> str | None:
+def _prompt_save_draft(email: dict, suggestions: dict):
     """Prompt user to save a suggested reply as a Gmail draft. Returns chosen label or None."""
     opts  = suggestions["suggestions"]
     count = len(opts)
@@ -127,8 +128,9 @@ def main():
     rows = []
     for email in emails:
         contact        = enrich_contact(email["sender"]) if using_gmail else {}
+        reputation     = get_reputation(email["sender"]) if using_gmail else {}
         classification = classify_email(email)
-        priority       = score_priority(email, classification, contact)
+        priority       = score_priority(email, classification, contact, reputation)
         rows.append((email, classification, priority))
         print(".", end="", flush=True)
     print(" done.\n")
@@ -169,13 +171,17 @@ def main():
         else:
             draft_choices.append(None)
 
-    # Phase 5: follow-up reminders
+    # Phase 5: record reputation from this session
+    if using_gmail:
+        update_from_session(rows, draft_choices)
+
+    # Phase 6: follow-up reminders
     if using_gmail:
         print("\nChecking for follow-up reminders...")
         reminders = get_followup_reminders()
         print_followup_reminders(reminders)
 
-    # Phase 6: export to CSV
+    # Phase 7: export to CSV
     csv_path = export_csv(rows, draft_choices, suggested_subjects)
     print(f"\n{'─' * 60}")
     print(f"Results exported to: {csv_path}")

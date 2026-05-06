@@ -40,7 +40,7 @@ SCORE_SCHEMA = {
 }
 
 
-def score_priority(email: dict, classification: dict, contact: dict = None) -> dict:
+def score_priority(email: dict, classification: dict, contact: dict = None, reputation: dict = None) -> dict:
     """
     Score the priority of a classified email.
 
@@ -48,6 +48,8 @@ def score_priority(email: dict, classification: dict, contact: dict = None) -> d
         email:          dict with 'sender', 'subject', 'body'
         classification: dict with 'classification', 'confidence', 'action_items'
         contact:        optional enrichment dict with 'company', 'domain_type', 'title'
+        reputation:     optional dict with 'response_rate', 'total_received',
+                        'is_frequent', 'is_responsive'
 
     Returns:
         dict with 'score' (int 1-10) and 'explanation' (str)
@@ -69,6 +71,19 @@ def score_priority(email: dict, classification: dict, contact: dict = None) -> d
         if parts:
             contact_text = "\n\nContact info:\n" + "\n".join(f"  {p}" for p in parts)
 
+    reputation_text = ""
+    if reputation and reputation["total_received"] > 0:
+        rate_pct = int((reputation["response_rate"] or 0) * 100)
+        parts = [
+            f"Total received: {reputation['total_received']}",
+            f"Response rate: {rate_pct}%",
+        ]
+        if reputation["is_responsive"]:
+            parts.append("(sender you frequently respond to — boost priority)")
+        elif reputation["is_frequent"] and not reputation["is_responsive"]:
+            parts.append("(frequent sender with low response rate — lower priority)")
+        reputation_text = "\n\nSender reputation:\n" + "\n".join(f"  {p}" for p in parts)
+
     prompt = (
         f"From: {email['sender']}\n"
         f"Subject: {email['subject']}\n\n"
@@ -76,6 +91,7 @@ def score_priority(email: dict, classification: dict, contact: dict = None) -> d
         f"Classification: {classification['classification'].upper()}"
         f"{action_text}"
         f"{contact_text}"
+        f"{reputation_text}"
     )
 
     response = client.messages.create(

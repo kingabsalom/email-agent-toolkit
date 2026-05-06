@@ -17,6 +17,7 @@ from classify_emails import classify_email
 from score_priority import score_priority
 from suggest_responses import suggest_responses
 from enrich_contact import enrich_contact
+from reputation import get_reputation, update_from_session
 from followup_tracker import get_followup_reminders
 from digest_email import send_digest
 from export_csv import export_csv
@@ -36,8 +37,9 @@ def main():
 
     for email in emails:
         contact        = enrich_contact(email["sender"])
+        reputation     = get_reputation(email["sender"])
         classification = classify_email(email)
-        priority       = score_priority(email, classification, contact)
+        priority       = score_priority(email, classification, contact, reputation)
         suggestions    = suggest_responses(email, classification)
         rows.append((email, classification, priority))
         suggested_subjects.append(suggestions.get("suggested_subject") or "")
@@ -45,6 +47,7 @@ def main():
     print(" done.")
 
     rows.sort(key=lambda r: r[2]["score"], reverse=True)
+    update_from_session(rows, [None] * len(rows))
 
     print("Checking follow-up reminders...")
     reminders = get_followup_reminders()
