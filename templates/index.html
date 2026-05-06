@@ -20,15 +20,19 @@
     .flash.success { background: #d4edda; color: #155724; border-left: 4px solid #28a745; }
     .flash.error   { background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545; }
 
-    /* Follow-up banner */
-    .followup-banner { background: #fff8e1; border-left: 4px solid #f59e0b; margin: 20px 28px 0; border-radius: 6px; padding: 14px 18px; }
-    .followup-banner h3 { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #92400e; margin-bottom: 8px; }
-    .followup-item { font-size: 0.83rem; color: #78350f; padding: 3px 0; }
-    .followup-item .days { font-weight: 700; }
+    /* Tabs */
+    .tabs { background: white; border-bottom: 2px solid #e5e7eb; display: flex; padding: 0 28px; gap: 4px; }
+    .tab { padding: 12px 20px; font-size: 0.88rem; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: color 0.15s; }
+    .tab:hover { color: #1a1a2e; }
+    .tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+    .tab-badge { display: inline-block; background: #fee2e2; color: #b91c1c; font-size: 0.7rem; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+
+    /* Tab content */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
     /* Main */
     main { max-width: 880px; margin: 0 auto; padding: 24px 28px 48px; }
-
     .empty-state { text-align: center; padding: 60px 20px; color: #888; }
     .empty-state p { font-size: 0.95rem; }
 
@@ -72,6 +76,25 @@
     .draft-subject { font-size: 0.82rem; color: #6b7280; margin-bottom: 6px; }
     .draft-body    { font-size: 0.82rem; color: #374151; white-space: pre-wrap; max-height: 72px; overflow: hidden; line-height: 1.5; }
 
+    /* Follow-up tab styles */
+    .followup-section { margin-bottom: 32px; }
+    .followup-section h2 { font-size: 0.9rem; font-weight: 700; color: #374151; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+
+    .followup-row { background: white; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); display: flex; align-items: center; gap: 16px; border-left: 5px solid #f59e0b; }
+    .followup-days { font-size: 1.1rem; font-weight: 800; color: #b45309; min-width: 40px; text-align: center; }
+    .followup-days span { display: block; font-size: 0.62rem; font-weight: 500; color: #d97706; }
+    .followup-body { flex: 1; min-width: 0; }
+    .followup-to      { font-size: 0.82rem; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .followup-subject { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .followup-date    { font-size: 0.78rem; color: #9ca3af; margin-top: 2px; }
+
+    .needs-response-row { background: white; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-left: 5px solid #f97316; }
+    .needs-response-row.urgent { border-left-color: #dc3545; }
+    .needs-response-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+    .needs-response-meta { flex: 1; min-width: 0; }
+
+    .empty-section { text-align: center; padding: 32px; color: #9ca3af; background: white; border-radius: 8px; font-size: 0.88rem; }
+
     /* Buttons */
     .btn { display: inline-block; padding: 6px 14px; border-radius: 5px; border: none; cursor: pointer; font-size: 0.8rem; font-weight: 600; margin-top: 8px; }
     .btn:hover { filter: brightness(0.92); }
@@ -100,108 +123,200 @@
 <div class="flash {{ category }}">{{ message }}</div>
 {% endfor %}
 
-{% if data and data.followup_reminders %}
-<div class="followup-banner">
-  <h3>Follow-up Reminders &mdash; {{ data.followup_reminders | length }} unanswered</h3>
-  {% for r in data.followup_reminders %}
-  <div class="followup-item">
-    <span class="days">{{ r.days_waiting }}d</span> &nbsp;&rarr;&nbsp;
-    <strong>{{ r.to }}</strong> &mdash; {{ r.subject }}
-    <span style="color:#aaa">(sent {{ r.sent_date }})</span>
-  </div>
-  {% endfor %}
-</div>
+<!-- Tab navigation -->
+{% if data %}
+{% set urgent_count = data.emails | selectattr('classification', 'in', ['urgent', 'action-required']) | list | length %}
+{% set followup_count = data.followup_reminders | length %}
+{% set alert_count = urgent_count + followup_count %}
 {% endif %}
 
-<main>
-  {% if not data %}
-  <div class="empty-state">
-    <p>Click <strong>Refresh Inbox</strong> in the header to fetch and process your Gmail inbox.</p>
+<div class="tabs">
+  <div class="tab active" onclick="showTab('inbox', this)">
+    Inbox
+    {% if data %}
+    <span style="font-size:0.75rem;color:#9ca3af;font-weight:500;margin-left:4px">{{ data.emails | length }}</span>
+    {% endif %}
   </div>
-  {% else %}
-
-  {% for email in data.emails %}
-  {% set ei = loop.index0 %}
-  <div class="card {{ email.classification }}">
-
-    <div class="card-header">
-      <div class="score-badge">
-        <div class="score-num">{{ email.priority_score }}</div>
-        <div class="score-denom">/10</div>
-      </div>
-      <div style="padding-top:2px">
-        <span class="label-badge {{ email.classification }}">{{ email.classification }}</span>
-      </div>
-      <div class="card-meta">
-        <div class="sender">{{ email.sender }}</div>
-        <div class="subject">{{ email.subject }}</div>
-        <div class="explanation">{{ email.priority_explanation }}</div>
-      </div>
-    </div>
-
-    {% if email.suggested_subject and email.suggested_subject != email.subject %}
-    <div class="section">
-      <div class="section-title">Suggested Subject</div>
-      <div class="suggested-subject">{{ email.suggested_subject }}</div>
-    </div>
+  <div class="tab" onclick="showTab('followups', this)">
+    Follow-ups
+    {% if data and alert_count > 0 %}
+    <span class="tab-badge">{{ alert_count }}</span>
     {% endif %}
+  </div>
+</div>
 
-    {% if email.action_items %}
-    <div class="section">
-      <div class="section-title">Action Items</div>
-      {% for item in email.action_items %}
-      <div class="action-item">{{ item }}</div>
-      {% endfor %}
-      <form action="/create-tasks" method="post">
-        <input type="hidden" name="email_idx" value="{{ ei }}">
-        <button type="submit" class="btn btn-amber">Add to Google Tasks</button>
-      </form>
+<!-- INBOX TAB -->
+<div id="tab-inbox" class="tab-content active">
+  <main>
+    {% if not data %}
+    <div class="empty-state">
+      <p>Click <strong>Refresh Inbox</strong> in the header to fetch and process your Gmail inbox.</p>
     </div>
-    {% endif %}
+    {% else %}
+    {% for email in data.emails %}
+    {% set ei = loop.index0 %}
+    <div class="card {{ email.classification }}">
 
-    {% if email.calendar_event and email.calendar_event.is_meeting_request %}
-    <div class="section">
-      <div class="section-title">Meeting Detected</div>
-      <div class="meeting-info">
-        <strong>{{ email.calendar_event.summary }}</strong>
-        {% if email.calendar_event.date %}
-          &mdash; {{ email.calendar_event.date }}
-          {% if email.calendar_event.time %} at {{ email.calendar_event.time }}{% endif %}
-        {% endif %}
-        &mdash; {{ email.calendar_event.duration_minutes }} min
+      <div class="card-header">
+        <div class="score-badge">
+          <div class="score-num">{{ email.priority_score }}</div>
+          <div class="score-denom">/10</div>
+        </div>
+        <div style="padding-top:2px">
+          <span class="label-badge {{ email.classification }}">{{ email.classification }}</span>
+        </div>
+        <div class="card-meta">
+          <div class="sender">{{ email.sender }}</div>
+          <div class="subject">{{ email.subject }}</div>
+          <div class="explanation">{{ email.priority_explanation }}</div>
+        </div>
       </div>
-      {% if email.calendar_event.description %}
-      <div style="color:#6b7280; font-size:0.82rem; margin-bottom:4px">{{ email.calendar_event.description }}</div>
+
+      {% if email.suggested_subject and email.suggested_subject != email.subject %}
+      <div class="section">
+        <div class="section-title">Suggested Subject</div>
+        <div class="suggested-subject">{{ email.suggested_subject }}</div>
+      </div>
       {% endif %}
-      <form action="/create-event" method="post">
-        <input type="hidden" name="email_idx" value="{{ ei }}">
-        <button type="submit" class="btn btn-green">Add to Calendar</button>
-      </form>
-    </div>
-    {% endif %}
 
-    {% if email.suggestions %}
-    <div class="section">
-      <div class="section-title">Draft Replies</div>
-      {% for draft in email.suggestions %}
-      <div class="draft-card">
-        <div class="draft-label">{{ draft.label }}</div>
-        <div class="draft-subject">{{ draft.subject }}</div>
-        <div class="draft-body">{{ draft.body }}</div>
-        <form action="/save-draft" method="post">
+      {% if email.action_items %}
+      <div class="section">
+        <div class="section-title">Action Items</div>
+        {% for item in email.action_items %}
+        <div class="action-item">{{ item }}</div>
+        {% endfor %}
+        <form action="/create-tasks" method="post">
           <input type="hidden" name="email_idx" value="{{ ei }}">
-          <input type="hidden" name="draft_idx" value="{{ loop.index0 }}">
-          <button type="submit" class="btn btn-blue">Save as Draft</button>
+          <button type="submit" class="btn btn-amber">Add to Google Tasks</button>
         </form>
       </div>
-      {% endfor %}
-    </div>
-    {% endif %}
+      {% endif %}
 
-  </div>
-  {% endfor %}
-  {% endif %}
-</main>
+      {% if email.calendar_event and email.calendar_event.is_meeting_request %}
+      <div class="section">
+        <div class="section-title">Meeting Detected</div>
+        <div class="meeting-info">
+          <strong>{{ email.calendar_event.summary }}</strong>
+          {% if email.calendar_event.date %}
+            &mdash; {{ email.calendar_event.date }}
+            {% if email.calendar_event.time %} at {{ email.calendar_event.time }}{% endif %}
+          {% endif %}
+          &mdash; {{ email.calendar_event.duration_minutes }} min
+        </div>
+        <form action="/create-event" method="post">
+          <input type="hidden" name="email_idx" value="{{ ei }}">
+          <button type="submit" class="btn btn-green">Add to Calendar</button>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if email.suggestions %}
+      <div class="section">
+        <div class="section-title">Draft Replies</div>
+        {% for draft in email.suggestions %}
+        <div class="draft-card">
+          <div class="draft-label">{{ draft.label }}</div>
+          <div class="draft-subject">{{ draft.subject }}</div>
+          <div class="draft-body">{{ draft.body }}</div>
+          <form action="/save-draft" method="post">
+            <input type="hidden" name="email_idx" value="{{ ei }}">
+            <input type="hidden" name="draft_idx" value="{{ loop.index0 }}">
+            <button type="submit" class="btn btn-blue">Save as Draft</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+    {% endif %}
+  </main>
+</div>
+
+<!-- FOLLOW-UPS TAB -->
+<div id="tab-followups" class="tab-content">
+  <main>
+    {% if not data %}
+    <div class="empty-state"><p>Click <strong>Refresh Inbox</strong> to load data.</p></div>
+    {% else %}
+
+    <!-- Section 1: Sent emails with no reply -->
+    <div class="followup-section">
+      <h2>Awaiting Reply &mdash; emails you sent with no response</h2>
+      {% if data.followup_reminders %}
+        {% for r in data.followup_reminders %}
+        <div class="followup-row">
+          <div class="followup-days">{{ r.days_waiting }}<span>days</span></div>
+          <div class="followup-body">
+            <div class="followup-to">To: {{ r.to }}</div>
+            <div class="followup-subject">{{ r.subject }}</div>
+            <div class="followup-date">Sent {{ r.sent_date }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-section">No unanswered sent emails — you are all caught up.</div>
+      {% endif %}
+    </div>
+
+    <!-- Section 2: Inbox emails needing a response -->
+    <div class="followup-section">
+      <h2>Needs Your Response &mdash; urgent and action-required in your inbox</h2>
+      {% set needs_response = data.emails | selectattr('classification', 'in', ['urgent', 'action-required']) | list %}
+      {% if needs_response %}
+        {% for email in needs_response %}
+        {% set ei = data.emails.index(email) %}
+        <div class="needs-response-row {{ email.classification }}">
+          <div class="needs-response-header">
+            <div>
+              <span class="label-badge {{ email.classification }}">{{ email.classification }}</span>
+              <span style="font-size:0.8rem;font-weight:700;margin-left:8px">{{ email.priority_score }}/10</span>
+            </div>
+          </div>
+          <div class="sender">{{ email.sender }}</div>
+          <div class="subject" style="margin-top:3px">{{ email.subject }}</div>
+          {% if email.action_items %}
+          <div style="margin-top:10px">
+            {% for item in email.action_items %}
+            <div class="action-item">{{ item }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if email.suggestions %}
+          <div style="margin-top:12px">
+            {% for draft in email.suggestions %}
+            <div class="draft-card">
+              <div class="draft-label">{{ draft.label }}</div>
+              <div class="draft-body">{{ draft.body }}</div>
+              <form action="/save-draft" method="post">
+                <input type="hidden" name="email_idx" value="{{ ei }}">
+                <input type="hidden" name="draft_idx" value="{{ loop.index0 }}">
+                <button type="submit" class="btn btn-blue">Save as Draft</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-section">No urgent or action-required emails — inbox is clear.</div>
+      {% endif %}
+    </div>
+
+    {% endif %}
+  </main>
+</div>
+
+<script>
+  function showTab(name, el) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    el.classList.add('active');
+  }
+</script>
 
 </body>
 </html>
