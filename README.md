@@ -16,6 +16,8 @@ This toolkit processes your Gmail inbox through a multi-agent AI pipeline — cl
 
 ![Python](https://img.shields.io/badge/Python-3.9+-blue) ![License](https://img.shields.io/badge/License-MIT-green) ![Anthropic](https://img.shields.io/badge/Powered%20by-Claude-orange) ![Gmail](https://img.shields.io/badge/Gmail-OAuth2-red)
 
+![Email Dashboard](dashboard_screenshot.png)
+
 ---
 
 ## The Problem
